@@ -29,11 +29,11 @@ public class Util {
     }
 
     // game control packet from server
-    public static char[] encodeControlPacket(Game game) {
-        int wordLength = game.getWord().length();
-        int incorrectGuesses = game.incorrectGuesses().size();
-        List<Character> incorrectGuessList = game.incorrectGuesses();
-        String progress = game.wordProgress();
+    public static char[] encodeControlPacket(GameState gameState) {
+        int wordLength = gameState.getWord().length();
+        int incorrectGuesses = gameState.incorrectGuesses().size();
+        List<Character> incorrectGuessList = gameState.incorrectGuesses();
+        String progress = gameState.wordProgress();
 
         char[] packet = new char[8 + progress.length() + incorrectGuessList.size()];
 

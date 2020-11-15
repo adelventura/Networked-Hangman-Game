@@ -1,77 +1,78 @@
 package com.amd.hangman;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.net.Socket;
 
-public class Game {
-    private String word;
-    private Set<Character> guesses;
-    private int incorrectGuessesRemaining;
+public class Game extends Thread {
 
-    public Game(String word, int maxGuesses) {
-        this.word = word;
-        this.incorrectGuessesRemaining = maxGuesses;
-        guesses = new HashSet<>();
+    public GameConfig config;
+    public Socket socket;
+    public BufferedReader input;
+    public DataOutputStream output; // TODO: BufferedWrite??
+
+    public Game(GameConfig config, Socket socket, BufferedReader input, DataOutputStream output) {
+        this.config = config;
+        this.socket = socket;
+        this.input = input;
+        this.output = output;
     }
 
-    public Message makeGuess(char c) {
-        if (guesses.contains(c)) { // already guessed this letter
-            return Message.REPEAT;
+    @Override
+    public void run() {
+        try {
+            GameState state = setupGame();
+            if (state == null) {
+                return;
+            }
+
+            while (true) {
+
+                output.writeUTF(
+                    state.wordProgress() + "\n"
+                );
+                output.writeUTF("Incorrect Guesses: " + state.incorrectGuesses() + "\n");
+                output.writeUTF("Letter to guess: ");
+
+                String command = input.readLine();
+                state.makeGuess(command.toLowerCase().charAt(0));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private GameState setupGame() throws Exception {
+        output.writeUTF(
+                "Ready to start game? (y/n) "
+        );
+        String command = input.readLine();
+        if (command.equals("n")) {
+            socket.close();
+            return null;
+        }
+
+        String word;
+        if (command.equals("y")) {
+            word = config.dictionary.getRandomWord();
         } else {
-            guesses.add(c);
-            if (word.indexOf(c) != -1) {
-                if (hasGuessedWord()) { // correct guess and completes word
-                    return Message.WIN;
-                }
-                return Message.CORRECT; // correct guess but doesn't complete word
-            } else {
-                if (incorrectGuessesRemaining != 0) { // incorrect guess
-                    incorrectGuessesRemaining--;
-                    return Message.INCORRECT;
-                } else {
-                    return Message.LOSE; // max incorrect guess reached
-                }
-            }
-        }
-    }
-
-    public boolean hasGuessedWord() {
-        for (int i = 0; i < word.length(); i++) {
-            if (!guesses.contains(word.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public String wordProgress() {
-        StringBuilder progress = new StringBuilder();
-        for (int i = 0; i < word.length(); i ++) {
-            char c = word.charAt(i);
-            if (guesses.contains(c)) {
-                progress.append(c);
-            } else {
-                progress.append("_");
-            }
+            word = config.dictionary.getWord(Integer.parseInt(command));
         }
 
-        return progress.toString();
+        return new GameState(
+                word,
+                config.maxGuesses
+        );
     }
 
-    public List<Character> incorrectGuesses() {
-        List<Character> incorrectGuesses = new ArrayList<>();
-        for (Character c : guesses) {
-            if (word.indexOf(c) == -1) {
-                incorrectGuesses.add(c);
-            }
-        }
-
-        return incorrectGuesses;
-    }
-
-    public String getWord() {
-        return word;
-    }
+//    public static char[] receiveGuess(char[] guessPacket) {
+//        char guess = guessPacket[1];
+//        Message result = gameState.makeGuess(guess);
+//        if (result.getCode() == 4 || result.getCode() == 5) { // game over (either won or lost)
+//            return Util.encodeMessagePacket(result);
+//        } else {
+//            // and start next round?
+//            return Util.encodeMessagePacket(result);
+//        }
+//    }
 }

@@ -3,6 +3,7 @@ package com.amd.hangman;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.List;
 import java.util.Scanner;
 
 public class Client {
@@ -29,7 +30,7 @@ public class Client {
         }
     }
 
-    public void sentGuess(String guess) {
+    public void sendGuess(String guess) {
         if (guess.length() > 1) {
             System.out.println(Message.ERROR_MULTIPLE_CHAR.getDescription());
         } else if (!Character.isAlphabetic(guess.charAt(0))) {
@@ -47,8 +48,17 @@ public class Client {
                 response = scanner.nextLine();
                 if (response.charAt(0) != 0) { // print message if it's a message packet
                     System.out.println(response.substring(2));
-                } else {
-                    Util.decodePacket();
+                } else { // otherwise print the different elements separately
+                    List<String> decoded = Util.decodePacket(response);
+                    for (int i = 0; i < decoded.get(3).length(); i++) {
+                        System.out.print(decoded.get(3).charAt(i) + " ");
+                    }
+                    System.out.println();
+                    System.out.print("Incorrect Guesses: ");
+                    for (int i = 0; i < decoded.get(4).length(); i++) {
+                        System.out.print(decoded.get(4).charAt(i) + " ");
+                    }
+                    System.out.println();
                 }
             }
         } catch (Exception e) {
