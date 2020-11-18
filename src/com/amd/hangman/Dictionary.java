@@ -7,6 +7,7 @@ public class Dictionary {
 
     public static Dictionary defaultDictionary() {
         return new Dictionary(new String[] {
+                "homework",
                 "horse",
                 "house",
                 "apple",
@@ -15,9 +16,8 @@ public class Dictionary {
                 "cottage",
                 "lunch",
                 "bread",
-                "homework",
                 "soap",
-                "sauce",
+                "lion",
                 "pillow",
                 "trash",
                 "puppy",

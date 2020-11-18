@@ -1,6 +1,6 @@
 package com.amd.hangman;
 
-import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 
@@ -8,10 +8,10 @@ public class Game extends Thread {
 
     public GameConfig config;
     public Socket socket;
-    public BufferedReader input;
+    public DataInputStream input;
     public DataOutputStream output; // TODO: BufferedWrite??
 
-    public Game(GameConfig config, Socket socket, BufferedReader input, DataOutputStream output) {
+    public Game(GameConfig config, Socket socket, DataInputStream input, DataOutputStream output) {
         this.config = config;
         this.socket = socket;
         this.input = input;
@@ -20,6 +20,8 @@ public class Game extends Thread {
 
     @Override
     public void run() {
+        char[] send;
+        char[] rcv;
         try {
             GameState state = setupGame();
             if (state == null) {
@@ -27,15 +29,26 @@ public class Game extends Thread {
             }
 
             while (true) {
+                send = Util.encodeControlPacket(state);
+                output.writeUTF(String.valueOf(send));
+                rcv = input.readUTF().toCharArray();
 
-                output.writeUTF(
-                    state.wordProgress() + "\n"
-                );
-                output.writeUTF("Incorrect Guesses: " + state.incorrectGuesses() + "\n");
-                output.writeUTF("Letter to guess: ");
+                Message message = state.makeGuess(rcv);
+                if (message == null) {
+                    // no message to report
+                } else if (message == Message.LOSE) {
+                    send = Util.encodeLoseMessagePacket(message, state.getWord());
+                    output.writeUTF(String.valueOf(send));
+                    // need to "gracefully exit" ?
+                } else if (message == Message.WIN) {
+                    send = Util.encodeMessagePacket(message);
+                    output.writeUTF(String.valueOf(send));
+                    // need to "gracefully exit" ?
+                } else {
+                    send = Util.encodeMessagePacket(message);
+                    output.writeUTF(String.valueOf(send));
+                }
 
-                String command = input.readLine();
-                state.makeGuess(command.toLowerCase().charAt(0));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -43,20 +56,26 @@ public class Game extends Thread {
     }
 
     private GameState setupGame() throws Exception {
-        output.writeUTF(
-                "Ready to start game? (y/n) "
-        );
-        String command = input.readLine();
-        if (command.equals("n")) {
+        char[] send;
+        char[] rcv;
+
+        send = Util.encodeMessagePacket(Message.START);
+        output.writeUTF(String.valueOf(send));
+        rcv = input.readUTF().toCharArray();
+
+        char command = rcv[1];
+
+        if (command == 'n') {
+            System.out.println("Server Printing: n received! closing socket!");
             socket.close();
             return null;
         }
 
         String word;
-        if (command.equals("y")) {
+        if (command == 'y') {
             word = config.dictionary.getRandomWord();
         } else {
-            word = config.dictionary.getWord(Integer.parseInt(command));
+            word = config.dictionary.getWord(Integer.parseInt(command + ""));
         }
 
         return new GameState(
@@ -64,15 +83,4 @@ public class Game extends Thread {
                 config.maxGuesses
         );
     }
-
-//    public static char[] receiveGuess(char[] guessPacket) {
-//        char guess = guessPacket[1];
-//        Message result = gameState.makeGuess(guess);
-//        if (result.getCode() == 4 || result.getCode() == 5) { // game over (either won or lost)
-//            return Util.encodeMessagePacket(result);
-//        } else {
-//            // and start next round?
-//            return Util.encodeMessagePacket(result);
-//        }
-//    }
 }

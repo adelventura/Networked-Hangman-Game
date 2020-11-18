@@ -1,27 +1,65 @@
 package com.amd.hangman;
 
-import java.util.*;
+import java.util.List;
 
 public class Util {
     // message packet from server
     public static char[] encodeMessagePacket(Message m) {
-        char[] packet;
+        char[] packet = new char[1024];
         int messageLength = m.getDescription().length();
+
         if (messageLength >= 10) {
-            packet = new char[3 + messageLength];
             packet[0] = Integer.toString(messageLength).charAt(0);
             packet[1] = Integer.toString(messageLength).charAt(1);
-            packet[2] = '|';
-            for (int i = 3; i < packet.length; i++) {
-                packet[i] = m.getDescription().charAt(i - 3);
+
+            int i;
+            for (i = 0; i < m.getDescription().length(); i++) {
+                packet[i + 2] = m.getDescription().charAt(i);
             }
         } else {
-            packet = new char[2 + messageLength];
+            packet = new char[1024];
             packet[0] = Integer.toString(messageLength).charAt(0);
-            packet[1] = '|';
 
-            for (int i = 2; i < packet.length; i++) {
-                packet[i] = m.getDescription().charAt(i - 2);
+            int i;
+            for (i = 0; i < m.getDescription().length(); i++) {
+                packet[i + 1] = m.getDescription().charAt(i);
+            }
+        }
+
+        return packet;
+    }
+
+    public static char[] encodeLoseMessagePacket(Message m, String word) {
+        char[] packet = new char[1024];
+        int messageLength = m.getDescription().length();
+        messageLength += word.length();
+
+        if (messageLength >= 10) {
+            packet[0] = Integer.toString(messageLength).charAt(0);
+            packet[1] = Integer.toString(messageLength).charAt(1);
+
+            int i;
+            for (i = 0; i < m.getDescription().length(); i++) {
+                packet[i + 2] = m.getDescription().charAt(i);
+            }
+
+            i += 2;
+            for (int j = 0; j < word.length(); j++) {
+                packet[i + j] = word.charAt(j);
+            }
+
+        } else {
+            packet = new char[1024];
+            packet[0] = Integer.toString(messageLength).charAt(0);
+
+            int i;
+            for (i = 0; i < m.getDescription().length(); i++) {
+                packet[i + 1] = m.getDescription().charAt(i);
+            }
+
+            i += 1;
+            for (int j = 0; j < word.length(); j++) {
+                packet[i + j] = word.charAt(j);
             }
         }
 
@@ -35,53 +73,19 @@ public class Util {
         List<Character> incorrectGuessList = gameState.incorrectGuesses();
         String progress = gameState.wordProgress();
 
-        char[] packet = new char[8 + progress.length() + incorrectGuessList.size()];
+        char[] packet = new char[1024];
 
-        packet[0] = '0'; // message flag 0
-        packet[1] = '|';
-        packet[2] = Integer.toString(wordLength).charAt(0);
-        packet[3] = '|';
-        packet[4] = Integer.toString(incorrectGuesses).charAt(0);
-        packet[5] = '|';
+        packet[0] = '0'; // flag for message packet is 0
+        packet[1] = Integer.toString(wordLength).charAt(0);
+        packet[2] = Integer.toString(incorrectGuesses).charAt(0);
 
         for (int i = 0; i < progress.length(); i++) {
-            packet[i + 6] = progress.charAt(i);
+            packet[i + 3] = progress.charAt(i);
         }
-        packet[6 + progress.length()] = '|';
         for (int i = 0; i < incorrectGuessList.size(); i++) {
-            packet[i + 7 + progress.length()] = incorrectGuessList.get(i);
+            packet[i + 3 + progress.length()] = incorrectGuessList.get(i);
         }
-        packet[7 + progress.length() + incorrectGuessList.size()] = '|';
 
         return packet;
-    }
-
-    // guess packet from client
-    public static char[] encodeGuessPacket(char guess) {
-        char c = Character.toLowerCase(guess);
-        return new char[]{1, '|', c};
-    }
-
-    public static List<String> decodePacket(String packet) {
-        char[] c = packet.toCharArray();
-        List<String> decoded = new ArrayList<>();
-        decoded.add(c[2] + "");
-        decoded.add(c[4] + "");
-
-        int i = 6;
-        String progress = "";
-        while (c[i] != '|') {
-            progress += c[i];
-            i++;
-        }
-        decoded.add(progress);
-        i++;
-        String incorrectGuesses = "";
-        while (c[i] != '|') {
-            incorrectGuesses += c[i];
-            i++;
-        }
-        decoded.add(incorrectGuesses);
-        return decoded;
     }
 }

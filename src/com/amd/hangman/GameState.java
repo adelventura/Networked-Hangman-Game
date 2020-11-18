@@ -16,20 +16,27 @@ public class GameState {
         guesses = new HashSet<>();
     }
 
-    public Message makeGuess(char c) {
+    public Message makeGuess(char[] packet) {
+        if (!Character.isAlphabetic(packet[1])) { // guess isn't a letter
+            return Message.ERROR_NOT_LETTER;
+        } else if (packet[2] != '\u0000') { // guess is multiple characters
+            return Message.ERROR_MULTIPLE_CHAR;
+        }
+
+        char c = packet[1];
         if (guesses.contains(c)) { // already guessed this letter
             return Message.REPEAT;
         } else {
             guesses.add(c);
-            if (word.indexOf(c) != -1) {
-                if (hasGuessedWord()) { // correct guess and completes word
+            if (word.indexOf(c) != -1) { // correct guess
+                if (hasGuessedWord()) { // completes word
                     return Message.WIN;
                 }
-                return Message.CORRECT; // correct guess but doesn't complete word
+                return null; // doesn't complete word
             } else {
                 if (incorrectGuessesRemaining != 0) { // incorrect guess
                     incorrectGuessesRemaining--;
-                    return Message.INCORRECT;
+                    return null;
                 } else {
                     return Message.LOSE; // max incorrect guess reached
                 }
@@ -37,12 +44,15 @@ public class GameState {
         }
     }
 
+    // determine whether word has been guessed
     public boolean hasGuessedWord() {
         for (int i = 0; i < word.length(); i++) {
+            // if letter found in word that hasn't been guessed, return false
             if (!guesses.contains(word.charAt(i))) {
                 return false;
             }
         }
+        // else get every letter in word has been guessed, return true
         return true;
     }
 
@@ -51,15 +61,16 @@ public class GameState {
         for (int i = 0; i < word.length(); i ++) {
             char c = word.charAt(i);
             if (guesses.contains(c)) {
-                progress.append(" " + c + " ");
+                progress.append(c);
             } else {
-                progress.append(" _ ");
+                progress.append("_");
             }
         }
 
         return progress.toString();
     }
 
+    // get list of incorrect guesses
     public List<Character> incorrectGuesses() {
         List<Character> incorrectGuesses = new ArrayList<>();
         for (Character c : guesses) {
