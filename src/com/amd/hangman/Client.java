@@ -70,6 +70,30 @@ public class Client {
             // length inpudt.readByte
             // length input.readByte
             //
+            byte packetFlag = input.readByte();
+            receiveBuf[0] = packetFlag;
+
+            if (packetFlag == 0) {
+                // control packet
+                receiveBuf[1] = input.readByte();
+                receiveBuf[2] = input.readByte();
+                int i = 0;
+                while (i < receiveBuf[1] + receiveBuf[2]) {
+                   receiveBuf[i + 3] = input.readByte();
+                   i++;
+                }
+                ControlPacket packet = ControlPacket.decode(receiveBuf);
+            } else {
+                // message packet
+                receiveBuf[1] = packetFlag;
+                int i = 0;
+                while (i < packetFlag) {
+                    receiveBuf[i + 1] = input.readByte();
+                    i++;
+                }
+                String message = MessagePacket.decode(receiveBuf);
+
+            }
 
             // check which packet type received
             if (receiveBuf[0] == 0) {  // message packet received
