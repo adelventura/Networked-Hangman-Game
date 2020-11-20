@@ -28,38 +28,35 @@ public class Client {
             serverIP = args[0];
             port = Integer.parseInt(args[1]);
             Client client = new Client(serverIP, port);
-            client.run();
+            client.play();
         }
     }
 
-    public void run() throws IOException {
+    public void play() throws IOException {
         byte[] receiveBuf;
-        char[] sendBuf;
+        byte[] sendBuf;
         scanner = new Scanner(System.in);
 
         // game setup
         receiveBuf = input.readUTF().toCharArray();
-        String startMessage = decodeMessagePacket(receiveBuf);
-        System.out.print(startMessage);
-        String command = scanner.nextLine().toLowerCase();
+        String startMessage = MessagePacket.decode(receiveBuf);
 
         // startup commands -- y/n/#
-        if (command.equals("n")) {
-            sendBuf = encodeStartPacket(command);
+        char command = getCommandFromUser(startMessage);
+        if (command == 'n') {
+            sendBuf = ResponsePacket.encode(command);
             output.writeUTF(String.valueOf(sendBuf));
             socket.close();
             System.exit(0);
-        } else if (command.equals("y")) {
-            sendBuf = encodeStartPacket(command);
         } else {
-            sendBuf = encodeStartPacket(command);
+            sendBuf = ResponsePacket.encode(command);
         }
         output.writeUTF(String.valueOf(sendBuf));
 
         // main game loop
         while (true) {
             try {
-                receiveBuf = input.readUTF().toCharArray();
+                receiveBuf = input.readUTF();
             } catch (EOFException eof) {
                 // Server closed the connection, game complete.
                 break;
@@ -86,7 +83,7 @@ public class Client {
                     }
                 }
 
-                sendBuf = encodeGuessPacket(guess);
+                sendBuf = ResponsePacket.encode(guess);
                 output.writeUTF(String.valueOf(sendBuf));
             } else {
                 String message = MessagePacket.decode(receiveBuf);
@@ -95,26 +92,24 @@ public class Client {
         }
     }
 
-    // construct guess packet to send to server
-    public static char[] encodeGuessPacket(Character guess) {
-        char[] packet = new char[1024];
-        packet[0] = '1';
+    private char getCommandFromUser(String message) {
+        char command;
 
-        for (int i = 0; i < guess.length(); i++) {
-            packet[i + 1] = guess.charAt(i);
+        while (true) {
+            System.out.print(message);
+            String s = scanner.nextLine().toLowerCase();
+            if (s.length() == 1) {
+                command = s.charAt(0);
+                if (!Character.isAlphabetic(command) || !Character.isDigit(command)) {
+                    System.out.println("Please enter one LETTER.");
+                } else {
+                    break;
+                }
+            } else {
+                System.out.println("Please enter ONE letter.");
+            }
         }
-        return packet;
-    }
-
-    // construct start packet to send to server (y, n, or number)
-    public static char[] encodeStartPacket(String command) {
-        char[] packet = new char[1024];
-        packet[0] = '1';
-
-        for (int i = 0; i < command.length(); i++) {
-            packet[i + 1] = command.charAt(i);
-        }
-        return packet;
+        return command;
     }
 }
 
