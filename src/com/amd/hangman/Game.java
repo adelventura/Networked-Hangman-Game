@@ -33,22 +33,23 @@ public class Game extends Thread {
                 output.writeUTF(String.valueOf(send));
                 rcv = input.readUTF().toCharArray();
 
-                Message message = state.makeGuess(rcv);
-                if (message == null) {
+                MessagePacket messagePacket = state.makeGuess(rcv);
+                if (messagePacket == null) {
                     // no message to report
-                } else if (message == Message.LOSE) {
-                    send = Util.encodeLoseMessagePacket(message, state.getWord());
-                    output.writeUTF(String.valueOf(send));
+                } else if (messagePacket == MessagePacket.LOSE) {
+                    send = Util.encodeLoseMessagePacket(messagePacket, state.getWord());
+                    closeConnection(send);
+                    break;
                     // need to "gracefully exit" ?
-                } else if (message == Message.WIN) {
-                    send = Util.encodeMessagePacket(message);
-                    output.writeUTF(String.valueOf(send));
+                } else if (messagePacket == MessagePacket.WIN) {
+                    send = Util.encodeMessagePacket(messagePacket);
+                    closeConnection(send);
+                    break;
                     // need to "gracefully exit" ?
                 } else {
-                    send = Util.encodeMessagePacket(message);
+                    send = Util.encodeMessagePacket(messagePacket);
                     output.writeUTF(String.valueOf(send));
                 }
-
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -59,20 +60,19 @@ public class Game extends Thread {
         char[] send;
         char[] rcv;
 
-        send = Util.encodeMessagePacket(Message.START);
+        send = Util.encodeMessagePacket(MessagePacket.START);
         output.writeUTF(String.valueOf(send));
         rcv = input.readUTF().toCharArray();
 
         char command = rcv[1];
 
+        String word;
         if (command == 'n') {
-            System.out.println("Server Printing: n received! closing socket!");
+            output.flush();
+            Server.socketCount -= 1;
             socket.close();
             return null;
-        }
-
-        String word;
-        if (command == 'y') {
+        } else if (command == 'y') {
             word = config.dictionary.getRandomWord();
         } else {
             word = config.dictionary.getWord(Integer.parseInt(command + ""));
@@ -82,5 +82,12 @@ public class Game extends Thread {
                 word,
                 config.maxGuesses
         );
+    }
+
+    private void closeConnection(char[] buffer) throws Exception {
+        Server.socketCount -= 1;
+        output.writeUTF(String.valueOf(buffer));
+        output.flush();
+        socket.close();
     }
 }

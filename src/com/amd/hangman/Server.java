@@ -4,13 +4,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Server {
 
     private static int port;
     private static Dictionary dictionary;
+    public static int socketCount;
 
     // port [file]
     public static void main(String[] args) throws Exception {
@@ -29,21 +28,21 @@ public class Server {
             dictionary = Dictionary.defaultDictionary();
         }
 
-        ServerSocket listener = new ServerSocket(port, 3);
+        ServerSocket listener = new ServerSocket(port);
         System.out.println("Server Printing: Hangman Server is Running on port " + port);
-        List<Socket> connectionList = new ArrayList<>();
-
+        socketCount = 0;
         while (true) {
             Socket socket;
-            if (connectionList.size() <= 3) {
+            if (socketCount < 3) {
+                socketCount++;
                 socket = listener.accept();
-                connectionList.add(socket);
                 System.out.println("Server Printing: Received connection: " + socket.toString());
 
                 GameConfig config = new GameConfig(
                         dictionary,
                         6
                 );
+
                 Thread gameThread = new Game(
                         config,
                         socket,
@@ -51,8 +50,13 @@ public class Server {
                         new DataOutputStream(socket.getOutputStream())
                 );
                 gameThread.start();
-            } else {
-                char[] packet = Util.encodeMessagePacket(Message.ERROR_TOO_MANY_CLIENTS);
+            } else { // already 3 connected clients, send connection denial message
+                socket = listener.accept();
+                System.out.println("Maximum of 3 connections. Connection request from " + socket.toString() + " denied.");
+                char[] packet = Util.encodeMessagePacket(MessagePacket.ERROR_TOO_MANY_CLIENTS);
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                output.writeUTF(String.valueOf(packet));
+                socket.close();
             }
         }
     }
