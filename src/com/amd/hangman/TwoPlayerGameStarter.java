@@ -23,12 +23,12 @@ public class TwoPlayerGameStarter extends Thread {
                 gameThread.start();
             } else {
                 // Try to find a two player game waiting for a second player.
-                for (GameConfig config : Server.games) {
-                    if (config.waitingForSecondPlayer()) {
+                for (GameConfig otherConfig : Server.games) {
+                    if (otherConfig.waitingForSecondPlayer()) {
                         // Found a pending game, add current player to the pending game.
-                        config.addPlayer(player);
+                        otherConfig.addPlayer(player);
                         // start the game.
-                        TwoPlayerGame game = new TwoPlayerGame(config);
+                        TwoPlayerGame game = new TwoPlayerGame(otherConfig);
                         game.start();
 
                         return;
@@ -39,11 +39,8 @@ public class TwoPlayerGameStarter extends Thread {
                 player.output.write(MessagePacket.encode(MessagePacket.TWO_PLAYER_WAITING));
                 Server.games.add(config);
             }
-        } catch (EOFException eof) {
-            config.quitGame(false);
-            return;
         } catch (Exception e) {
-            e.printStackTrace();
+            config.quitGame(false);
         }
     }
 }

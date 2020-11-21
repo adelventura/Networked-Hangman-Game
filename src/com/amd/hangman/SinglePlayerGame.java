@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class SinglePlayerGame extends Thread {
 
@@ -42,11 +43,8 @@ public class SinglePlayerGame extends Thread {
                     return;
                 }
             }
-        } catch (EOFException eof) {
-            config.quitGame(false);
-            return;
         } catch (Exception e) {
-            e.printStackTrace();
+            config.quitGame(false);
         }
     }
 
@@ -56,6 +54,11 @@ public class SinglePlayerGame extends Thread {
             String guess = MessagePacket.decode(input);
             String response = state.makeGuess(guess);
             if (response != null) {
+                if (state.isOver()) {
+                    // if the game is over also print the control packet.
+                    output.write(ControlPacket.encode(state));
+                }
+
                 output.write(MessagePacket.encode(response));
             }
 

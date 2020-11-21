@@ -5,7 +5,9 @@ Ashley DelVentura (adelventura3)
 
 HOW TO RUN:
 - Compile the code using the Makefile.
-    make
+    "make" will compile all of the .java files
+    "make clean" will remove all .class files
+- Run using "server [port] [optional dictionary text file]" and "client [server IP] [port]"
 
 TEST RESULT:
 - Server output for test result is in file server_readme.txt
@@ -23,7 +25,8 @@ The player starts the game by entering y, n, or a number.
 - If the player enters y, then the server will start a new game for the player.
     - However, if there are currently 3 other games running (3 other sockets) then the server will send a message saying
       "Server already connected to three clients. Please try again later." and the client will terminate.
-      Server will also print connection denied message: "Maximum of 3 connections. Connection request from Socket[addr=/127.0.0.1,port=63942,localport=2017] denied."
+      Server will also print connection denied message: "Maximum of 3 connections. Connection request from
+      Socket[addr=/127.0.0.1,port=63942,localport=2017] denied."
 - If the player enters a number, then server will start a new game for the player and use the number they entered to
   select the word to guess from the dictionary (backdoor).
     - Same as above if there are already 3 sockets running though.
@@ -34,8 +37,8 @@ GAMEPLAY:
   Incorrect Guesses:
 
   Letter to guess:
-- The player enters a guess and presses enter. The guess is encoded into a packet and sent to the server. If there is a problem
-  with the guess, the server will send an error message packet and wait for another guess.
+- The player enters a guess and presses enter. The guess is encoded into a packet and sent to the server. If there
+  is a problem with the guess, the server will send an error message packet and wait for another guess.
     - Too many characters error example:
       _ _ _ _
       Incorrect Guesses:
@@ -63,7 +66,15 @@ GAMEPLAY:
       Letter to guess: u
       Repeated guess! Please try again.
       Letter to guess:
-- The guess entered didn't
+- If there are no issues with the guess, then the server will update the game state and send a new control packet to the
+  client containing the updated word progress and incorrect guesses (following the control packet format from the
+  project overview and addendum).
+- The client will continue being prompted to enter guesses until one of the following happens:
+    1. 6 incorrect guesses are made and game is lost
+    2. Correctly guess word and game is won
+- Once the game is either won or lost, the server will send a final message packet to the client and end the connection.
+- Then the client will terminate.
+
 
 SERVER MESSAGES:
 - The server prints a startup message when it starts running: "Hangman Server is Running on port [port number]"
@@ -75,7 +86,7 @@ SERVER MESSAGES:
 
 CLIENT MESSAGES:
 - During game play, the client only prints messages recieved from the server.
-- Messages from the server are:
+- Those messages are:
     - "You win!"
     - "You lose: [word]"
     - "Letter to guess:"
@@ -84,4 +95,3 @@ CLIENT MESSAGES:
     - "Error! Please guess one LETTER."
     - "Error! Please guess ONE letter."
     - "Server already connected to three clients. Please try again later."
-- Once the game is either won or lost, the client will print "Game over!" and terminate.

@@ -17,6 +17,8 @@ public class MessagePacket {
     public final static String TWO_PLAYER_WAITING = "Waiting for other player!\n";
     public final static String TWO_PLAYER_GAME_START = "Game Starting!\n";
     public final static String TWO_PLAYER_TURN_START = "Your Turn!\n";
+    public final static String CORRECT_GUESS = "Correct!\n";
+    public final static String INCORRECT_GUESS = "Incorrect!\n";
 
     public static byte[] encode(String message) {
         int packetLength = 1 + message.length();
