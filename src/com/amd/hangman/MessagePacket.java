@@ -4,7 +4,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 public class MessagePacket {
-    public final static String REPEATED_GUESS = "Repeated guess! Please try again.\n";
+    public final static String REPEATED_GUESS = "Error! Letter _ has been guessed before. Please guess another letter.\n";
     public final static String WIN = "You win!";
     public final static String LOSE = "You lose: ";
     public final static String GUESS = "Letter to guess: ";

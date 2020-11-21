@@ -77,7 +77,8 @@ public class Game extends Thread {
                 word = config.dictionary.getRandomWord();
             } else {
                 try {
-                    int backdoorWordIndex = Integer.parseInt(response);
+                    // dictionary backdoor is 1 indexed.
+                    int backdoorWordIndex = Integer.parseInt(response) + 1;
                     word = config.dictionary.getWord(backdoorWordIndex);
                 } catch (NumberFormatException ignored) {
                 }

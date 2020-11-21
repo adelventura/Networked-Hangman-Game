@@ -27,7 +27,8 @@ public class GameState {
         }
 
         if (guesses.contains(c)) { // already guessed this letter
-            return MessagePacket.REPEATED_GUESS;
+            String repeatedGuessMessage = MessagePacket.REPEATED_GUESS.replace('_', c);
+            return repeatedGuessMessage;
         } else {
             guesses.add(c);
             if (word.indexOf(c) != -1) { // correct guess
