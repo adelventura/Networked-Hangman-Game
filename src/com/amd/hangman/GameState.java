@@ -16,16 +16,18 @@ public class GameState {
         guesses = new HashSet<>();
     }
 
-    public MessagePacket makeGuess(char[] packet) {
-        if (!Character.isAlphabetic(packet[1])) { // guess isn't a letter
-            return MessagePacket.ERROR_NOT_LETTER;
-        } else if (packet[2] != '\u0000') { // guess is multiple characters
+    public String makeGuess(String guess) {
+        if (guess.length() != 1) {
             return MessagePacket.ERROR_MULTIPLE_CHAR;
         }
 
-        char c = packet[1];
+        char c = guess.charAt(0);
+        if (!Character.isAlphabetic(c)) {
+            return MessagePacket.ERROR_NOT_LETTER;
+        }
+
         if (guesses.contains(c)) { // already guessed this letter
-            return MessagePacket.REPEAT;
+            return MessagePacket.REPEATED_GUESS;
         } else {
             guesses.add(c);
             if (word.indexOf(c) != -1) { // correct guess
@@ -34,12 +36,13 @@ public class GameState {
                 }
                 return null; // doesn't complete word
             } else {
-                if (incorrectGuessesRemaining != 0) { // incorrect guess
-                    incorrectGuessesRemaining--;
-                    return null;
-                } else {
-                    return MessagePacket.LOSE; // max incorrect guess reached
+                // incorrect guess
+                incorrectGuessesRemaining--;
+                if (incorrectGuessesRemaining == 0) {
+                    return MessagePacket.LOSE + word; // max incorrect guess reached
                 }
+
+                return null;
             }
         }
     }
@@ -54,6 +57,10 @@ public class GameState {
         }
         // else get every letter in word has been guessed, return true
         return true;
+    }
+
+    public boolean isOver() {
+        return incorrectGuessesRemaining <= 0 || hasGuessedWord();
     }
 
     public String wordProgress() {

@@ -1,5 +1,7 @@
 package com.amd.hangman;
 
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,18 +14,18 @@ public class ControlPacket {
         return controlPacket.encode();
     }
 
-    public static ControlPacket decode(byte[] packet) {
-        int wordLength = packet[1];
-        int incorrectGuessesLength = packet[2];
+    public static ControlPacket decode(DataInputStream input) throws IOException {
+        int wordLength = input.readByte();
+        int incorrectGuessesLength = input.readByte();
 
         StringBuilder wordProgress = new StringBuilder();
         for (int i = 0; i < wordLength; i++) {
-            wordProgress.append(packet[2 + i]);
+            wordProgress.append((char) input.readByte());
         }
 
         ArrayList<Character> incorrectGuesses = new ArrayList<>();
         for (int i = 0; i < incorrectGuessesLength; i++) {
-            char c = (char) packet[2 + wordLength + i];
+            char c = (char) input.readByte();
             incorrectGuesses.add(c);
         }
 
@@ -63,11 +65,15 @@ public class ControlPacket {
 
     public String formatted() {
         StringBuilder builder = new StringBuilder();
-        builder.append(wordProgress + "\n");
+        for (Character c : wordProgress.toCharArray()) {
+            builder.append(c + " ");
+        }
+        builder.append('\n');
         builder.append("Incorrect Guesses: ");
         for (Character c : incorrectGuesses) {
             builder.append(c + " ");
         }
+        builder.append('\n');
         return builder.toString();
     }
 }

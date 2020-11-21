@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -22,118 +23,51 @@ public class Client {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length <= 1) { // TODO: change args
+        if (args.length <= 1) {
             System.out.println("Incorrect arguments. Please provide a port number and server IP");
-        } else {
-            serverIP = args[0];
-            port = Integer.parseInt(args[1]);
+            return;
+        }
+
+        serverIP = args[0];
+        port = Integer.parseInt(args[1]);
+        try {
             Client client = new Client(serverIP, port);
             client.play();
+        } catch (ConnectException ce) {
+            System.out.println("Could not connect to server.");
+            return;
         }
     }
 
     public void play() throws IOException {
-        byte[] receiveBuf;
-        byte[] sendBuf;
         scanner = new Scanner(System.in);
 
-        // game setup
-        receiveBuf = input.readUTF().toCharArray();
-        String startMessage = MessagePacket.decode(receiveBuf);
-
-        // startup commands -- y/n/#
-        char command = getCommandFromUser(startMessage);
-        if (command == 'n') {
-            sendBuf = ResponsePacket.encode(command);
-            output.writeUTF(String.valueOf(sendBuf));
-            socket.close();
-            System.exit(0);
-        } else {
-            sendBuf = ResponsePacket.encode(command);
-        }
-        output.writeUTF(String.valueOf(sendBuf));
-
         // main game loop
-        while (true) {
-            try {
-                receiveBuf = input.readUTF();
-            } catch (EOFException eof) {
-                // Server closed the connection, game complete.
-                break;
-            }
-
-//            decodePacket
-//                    length = readByte
-//                    if (0) => decodeControl(input)
-//                    else => decodeMessage(length, input)
-            // decodeControl(input) throw IOEXception
-            // length inpudt.readByte
-            // length input.readByte
-            //
-            byte packetFlag = input.readByte();
-            receiveBuf[0] = packetFlag;
-
-            if (packetFlag == 0) {
-                // control packet
-                receiveBuf[1] = input.readByte();
-                receiveBuf[2] = input.readByte();
-                int i = 0;
-                while (i < receiveBuf[1] + receiveBuf[2]) {
-                   receiveBuf[i + 3] = input.readByte();
-                   i++;
-                }
-                ControlPacket packet = ControlPacket.decode(receiveBuf);
-            } else {
-                // message packet
-                receiveBuf[1] = packetFlag;
-                int i = 0;
-                while (i < packetFlag) {
-                    receiveBuf[i + 1] = input.readByte();
-                    i++;
-                }
-                String message = MessagePacket.decode(receiveBuf);
-
-            }
-
-            // check which packet type received
-            if (receiveBuf[0] == 0) {  // message packet received
-                ControlPacket packet = ControlPacket.decode(receiveBuf);
-                System.out.println(packet.formatted());
-                while (true) {
-                    System.out.print("Letter to guess: ");
-                    String guess = scanner.nextLine().toLowerCase(); // TODO: handle invalid input
-                    if (guess.length() == 1) {
+        try {
+            while (true) {
+                byte packetFlag = input.readByte();
+                switch (packetFlag) {
+                    case 0:
+                        ControlPacket packet = ControlPacket.decode(input);
+                        System.out.println(packet.formatted());
                         break;
-                    }
+                    default:
+                        String message = MessagePacket.decode(packetFlag, input);
+                        System.out.print(message);
+                        if (hasPrompt(message)) {
+                            String response = scanner.nextLine();
+                            output.write(MessagePacket.encode(response));
+                        }
+                        break;
                 }
-
-                sendBuf = ResponsePacket.encode(guess);
-                output.writeUTF(String.valueOf(sendBuf));
-            } else {
-                String message = MessagePacket.decode(receiveBuf);
-                System.out.println(message + "\n");
             }
+        } catch (EOFException eof) {
+            // Server closed the connection, game complete. Fallthrough to exit.
         }
     }
 
-    private char getCommandFromUser(String message) {
-        char command;
-
-        while (true) {
-            System.out.print(message);
-            String s = scanner.nextLine().toLowerCase();
-            if (s.length() == 1) {
-                command = s.charAt(0);
-                if (!Character.isAlphabetic(command) || !Character.isDigit(command)) {
-                    System.out.println("Please enter one LETTER.");
-                } else {
-                    break;
-                }
-            } else {
-                System.out.println("Please enter ONE letter.");
-            }
-        }
-        return command;
+    private boolean hasPrompt(String message) {
+        return message.endsWith(": ");
     }
 }
 

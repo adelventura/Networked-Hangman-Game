@@ -1,7 +1,11 @@
 package com.amd.hangman;
 
+import jdk.jshell.execution.Util;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.net.Socket;
 
 public class Game extends Thread {
@@ -9,7 +13,7 @@ public class Game extends Thread {
     public GameConfig config;
     public Socket socket;
     public DataInputStream input;
-    public DataOutputStream output; // TODO: BufferedWrite??
+    public DataOutputStream output;
 
     public Game(GameConfig config, Socket socket, DataInputStream input, DataOutputStream output) {
         this.config = config;
@@ -20,63 +24,65 @@ public class Game extends Thread {
 
     @Override
     public void run() {
-        char[] send;
-        char[] rcv;
         try {
             GameState state = setupGame();
             if (state == null) {
+                connectionClosed(true);
                 return;
             }
 
             while (true) {
-                send = Util.encodeControlPacket(state);
-                output.writeUTF(String.valueOf(send));
-                rcv = input.readUTF().toCharArray();
+                output.write(ControlPacket.encode(state));
+                handleGuess(state);
 
-                MessagePacket messagePacket = state.makeGuess(rcv);
-                if (messagePacket == null) {
-                    // no message to report
-                } else if (messagePacket == MessagePacket.LOSE) {
-                    send = Util.encodeLoseMessagePacket(messagePacket, state.getWord());
-                    closeConnection(send);
-                    break;
-                    // need to "gracefully exit" ?
-                } else if (messagePacket == MessagePacket.WIN) {
-                    send = Util.encodeMessagePacket(messagePacket);
-                    closeConnection(send);
-                    break;
-                    // need to "gracefully exit" ?
-                } else {
-                    send = Util.encodeMessagePacket(messagePacket);
-                    output.writeUTF(String.valueOf(send));
+                if (state.isOver()) {
+                    // end game
+                    connectionClosed(true);
+                    return;
                 }
             }
+        } catch (EOFException eof) {
+            connectionClosed(false);
+            return;
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private GameState setupGame() throws Exception {
-        char[] send;
-        char[] rcv;
+    private void handleGuess(GameState state) throws Exception {
+        while (true) {
+            output.write(MessagePacket.encode(MessagePacket.GUESS));
+            String guess = MessagePacket.decode(input);
+            String response = state.makeGuess(guess);
+            if (response != null) {
+                output.write(MessagePacket.encode(response));
+            }
 
-        send = Util.encodeMessagePacket(MessagePacket.START);
-        output.writeUTF(String.valueOf(send));
-        rcv = input.readUTF().toCharArray();
-
-        char command = rcv[1];
-
-        String word;
-        if (command == 'n') {
-            output.flush();
-            Server.socketCount -= 1;
-            socket.close();
-            return null;
-        } else if (command == 'y') {
-            word = config.dictionary.getRandomWord();
-        } else {
-            word = config.dictionary.getWord(Integer.parseInt(command + ""));
+            if (state.isOver() || response == null) {
+                return;
+            }
         }
+    }
+
+    private GameState setupGame() throws IOException {
+        String word = null;
+        do {
+            output.write(MessagePacket.encode(MessagePacket.START));
+            String response = MessagePacket.decode(input).toLowerCase();
+            if (response.equals("n")) {
+                return null;
+            }
+
+            if (response.equals("y")) {
+                word = config.dictionary.getRandomWord();
+            } else {
+                try {
+                    int backdoorWordIndex = Integer.parseInt(response);
+                    word = config.dictionary.getWord(backdoorWordIndex);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        } while (word == null);
 
         return new GameState(
                 word,
@@ -84,10 +90,17 @@ public class Game extends Thread {
         );
     }
 
-    private void closeConnection(char[] buffer) throws Exception {
+    private void connectionClosed(Boolean closeSocket) {
+        System.out.println("Disconnected connection: " + socket.toString());
         Server.socketCount -= 1;
-        output.writeUTF(String.valueOf(buffer));
-        output.flush();
-        socket.close();
+
+        if (closeSocket) {
+            try {
+                output.flush();
+                socket.close();
+            } catch (Exception e) {
+                // ignore. already closing the socket.
+            }
+        }
     }
 }
