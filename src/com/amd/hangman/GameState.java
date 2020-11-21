@@ -1,19 +1,17 @@
 package com.amd.hangman;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GameState {
-    private String word;
+    private final String word;
     private Set<Character> guesses;
-    private int incorrectGuessesRemaining;
+    private volatile int incorrectGuessesRemaining;
 
     public GameState(String word, int maxGuesses) {
         this.word = word;
         this.incorrectGuessesRemaining = maxGuesses;
-        guesses = new HashSet<>();
+        guesses = Collections.newSetFromMap(new ConcurrentHashMap<>());
     }
 
     public String makeGuess(String guess) {
@@ -40,7 +38,7 @@ public class GameState {
                 // incorrect guess
                 incorrectGuessesRemaining--;
                 if (incorrectGuessesRemaining == 0) {
-                    return MessagePacket.LOSE + word; // max incorrect guess reached
+                    return MessagePacket.LOSE + word + "\n"; // max incorrect guess reached
                 }
 
                 return null;

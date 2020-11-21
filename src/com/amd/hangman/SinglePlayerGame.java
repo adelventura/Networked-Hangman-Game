@@ -1,33 +1,34 @@
 package com.amd.hangman;
 
-import jdk.jshell.execution.Util;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
 
-public class Game extends Thread {
+public class SinglePlayerGame extends Thread {
 
     public GameConfig config;
     public Socket socket;
     public DataInputStream input;
     public DataOutputStream output;
 
-    public Game(GameConfig config, Socket socket, DataInputStream input, DataOutputStream output) {
+    public SinglePlayerGame(GameConfig config) {
         this.config = config;
-        this.socket = socket;
-        this.input = input;
-        this.output = output;
+        GameConfig.Player player = config.players.get(0);
+        this.socket = player.socket;
+        this.input = player.input;
+        this.output = player.output;
     }
 
     @Override
     public void run() {
+        Server.games.add(config);
+
         try {
             GameState state = setupGame();
             if (state == null) {
-                connectionClosed(true);
+                config.quitGame(true);
                 return;
             }
 
@@ -37,12 +38,12 @@ public class Game extends Thread {
 
                 if (state.isOver()) {
                     // end game
-                    connectionClosed(true);
+                    config.quitGame(true);
                     return;
                 }
             }
         } catch (EOFException eof) {
-            connectionClosed(false);
+            config.quitGame(false);
             return;
         } catch (Exception e) {
             e.printStackTrace();
@@ -89,19 +90,5 @@ public class Game extends Thread {
                 word,
                 config.maxGuesses
         );
-    }
-
-    private void connectionClosed(Boolean closeSocket) {
-        System.out.println("Disconnected connection: " + socket.toString());
-        Server.socketCount -= 1;
-
-        if (closeSocket) {
-            try {
-                output.flush();
-                socket.close();
-            } catch (Exception e) {
-                // ignore. already closing the socket.
-            }
-        }
     }
 }
