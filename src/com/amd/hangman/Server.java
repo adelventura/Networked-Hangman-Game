@@ -22,10 +22,10 @@ public class Server {
 
         int port = Integer.parseInt(args[0]);
         Dictionary dictionary = Dictionary.defaultDictionary();
-        Boolean twoPlayerEnabled = false;
+        boolean twoPlayerEnabled = false;
 
-        if (args.length > 1) {
-            if (args[1].equals(MULTIPLAYER_FLAG)) {
+        if (args.length > 1) { // optional args present
+            if (args[1].equals(MULTIPLAYER_FLAG)) { // multiplayer mode
                 twoPlayerEnabled = true;
             } else {
                 // use file for dictionary

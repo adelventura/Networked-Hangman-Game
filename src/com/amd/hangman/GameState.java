@@ -15,6 +15,7 @@ public class GameState {
     }
 
     public String makeGuess(String guess) {
+        guess = guess.toLowerCase();
         if (guess.length() != 1) {
             return MessagePacket.ERROR_MULTIPLE_CHAR;
         }
